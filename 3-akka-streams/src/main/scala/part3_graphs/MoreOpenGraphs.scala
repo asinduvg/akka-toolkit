@@ -59,7 +59,7 @@ object MoreOpenGraphs extends App {
     }
   )
 
-  //  max3RunnableGraph.run()
+    max3RunnableGraph.run()
 
   // same for UniformFanOutShape
 
@@ -118,7 +118,7 @@ object MoreOpenGraphs extends App {
     }
   )
 
-  suspiciousTxnRunnableGraph.run()
+//  suspiciousTxnRunnableGraph.run()
 
 
 }
