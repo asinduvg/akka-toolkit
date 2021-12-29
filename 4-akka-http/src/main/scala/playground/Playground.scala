@@ -27,7 +27,7 @@ object Playground extends App {
       ))
     }
 
-  val bindingFuture = Http().bindAndHandle(simpleRoute, "localhost", 8080)
+  val bindingFuture = Http().bindAndHandle(simpleRoute, "localhost", 8000)
   // wait for a new line, then terminate the server
   StdIn.readLine()
   bindingFuture
