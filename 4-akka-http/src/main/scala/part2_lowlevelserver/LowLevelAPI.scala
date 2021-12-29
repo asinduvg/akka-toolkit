@@ -4,19 +4,19 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.IncomingConnection
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.Location
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 object LowLevelAPI extends App {
 
   implicit val system = ActorSystem("LowLevelServerAPI")
   implicit val materializer = ActorMaterializer()
-
-  import system.dispatcher
 
   import system.dispatcher
 
@@ -165,6 +165,75 @@ object LowLevelAPI extends App {
   //  }
   //
   // shorthand version
-  Http().bindAndHandle(streamsBasedRequestHandler, "localhost", 8082)
+  //  Http().bindAndHandle(streamsBasedRequestHandler, "localhost", 8082)
+
+  /**
+   * Exercise: create your own HTTP server running on localhost on 8388, which replies
+   *  - with a welcome message on the "front door" localhost:8388
+   *  - with a proper HTML on localhost:8388/about
+   *  - with a 404 message otherwise
+   */
+
+  val ownRequestHandler: HttpRequest => HttpResponse = {
+    case HttpRequest(HttpMethods.GET, Uri.Path("/"), headers, entity, protocol) =>
+      HttpResponse(
+        StatusCodes.OK, // HTTP 200
+        entity = HttpEntity(
+          ContentTypes.`text/html(UTF-8)`,
+          """
+            |<html>
+            | <body>
+            |   front door
+            | </body>
+            |</html>
+            |""".stripMargin
+        )
+      )
+
+    case HttpRequest(HttpMethods.GET, Uri.Path("/about"), headers, entity, protocol) =>
+      HttpResponse(
+        StatusCodes.OK, // HTTP 200
+        entity = HttpEntity(
+          ContentTypes.`text/html(UTF-8)`,
+          """
+            |<html>
+            | <body>
+            |   about page
+            | </body>
+            |</html>
+            |""".stripMargin
+        )
+      )
+
+    // path /search redirects to some other part of our website/webapp/microservice
+    case HttpRequest(HttpMethods.GET, Uri.Path("/search"), _, _, _) =>
+      HttpResponse(
+        StatusCodes.Found,
+        headers = List(Location("http://google.com"))
+      )
+
+    case request: HttpRequest =>
+      request.discardEntityBytes()
+      HttpResponse(
+        StatusCodes.NotFound, // 404
+        entity = HttpEntity(
+          ContentTypes.`text/html(UTF-8)`,
+          """
+            |<html>
+            | <body>
+            |   OOPS! The resource can't be found
+            | </body>
+            |</html>
+            |""".stripMargin
+        )
+      )
+  }
+
+  val bindingFuture = Http().bindAndHandleSync(ownRequestHandler, "localhost", 8388)
+
+  // shutdown the server
+  bindingFuture
+    .flatMap(binding => binding.unbind())
+    .onComplete(_ => system.terminate())
 
 }
