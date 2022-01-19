@@ -27,7 +27,7 @@ object PersistentActors extends App {
     var latestInvoiceId = 0
     var totalAmount = 0
 
-    override def persistenceId: String = "sim[le-accountant" // best practice - make it unique
+    override def persistenceId: String = "simple-accountant" // best practice - make it unique
 
     /**
      * The "normal" receive method
@@ -141,7 +141,7 @@ object PersistentActors extends App {
    */
 
   val newInvoices = for (i <- 1 to 5) yield Invoice("The awesome chairs", new Date, i * 2000)
-  accountant ! InvoiceBulk(newInvoices.toList)
+  //  accountant ! InvoiceBulk(newInvoices.toList)
 
   /*
     NEVER EVER CALL PERSIST OR PERSIST ALL FROM FUTURES.
