@@ -1,4 +1,4 @@
-name := "5-akka-remoting-and-clusteringg"
+name := "5-akka-remoting-and-clustering"
 
 version := "0.1"
 
