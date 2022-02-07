@@ -1,6 +1,6 @@
 package part2_remoting
 
-import akka.actor.{Actor, ActorIdentity, ActorLogging, ActorRef, ActorSystem, Identify, Props}
+import akka.actor.{Actor, ActorIdentity, ActorLogging, ActorSystem, Identify, Props}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 
