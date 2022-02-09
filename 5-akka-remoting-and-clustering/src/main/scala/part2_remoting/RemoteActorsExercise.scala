@@ -1,6 +1,7 @@
 package part2_remoting
 
 import akka.actor.{Actor, ActorIdentity, ActorLogging, ActorRef, ActorSystem, Identify, PoisonPill, Props}
+import akka.routing.FromConfig
 import com.typesafe.config.ConfigFactory
 
 object WordCountDomain {
@@ -28,18 +29,37 @@ class WordCountMaster extends Actor with ActorLogging {
 
   import WordCountDomain._
 
-  override def receive: Receive = {
+  val workerRouter = context.actorOf(FromConfig.props(Props[WordCountWorker]), "workerRouter")
+
+  override def receive: Receive = onlineWithRouter(0, 0)
+
+  def onlineWithRouter(remainingTasks: Int, totalCount: Int): Receive = {
+    case text: String =>
+      // split it into sentences
+      val sentences = text.split("\\. ")
+      // send sentences to workers in turn
+      sentences.foreach(sentence => workerRouter ! WordCountTask(sentence))
+      context.become(onlineWithRouter(remainingTasks + sentences.length, totalCount))
+    case WordCountResult(count) =>
+      if (remainingTasks == 1) {
+        log.info(s"TOTAL RESULT: ${totalCount + count}")
+        context.stop(self)
+      } else {
+        context.become(onlineWithRouter(remainingTasks - 1, totalCount + count))
+      }
+  }
+
+  def waitingToInitializeWorkers(nWorkers: Int): Receive = {
     case Initialize(nWorkers) =>
-      log.info("Master initializing...")
-      val workerSelections = (1 to nWorkers).map(i => context.actorSelection(s"akka://WorkersSystem@localhost:2552/user/wordCountWorker$i"))
-      workerSelections.foreach(_ ! Identify("rtjvm"))
-      context.become(initializing(List(), nWorkers))
-    // identify the workers in the remote JVM
-    /*
-      - create actor selections for every worker from 1 to nWorkers
-      - send Identify messages to the actor selections
-      - get into an initialization state, while you're receiving ActorIdentities
-     */
+      val workers = (1 to nWorkers).map(i => context.actorOf(Props[WordCountWorker], s"wordCountWorker$i"))
+      context.become(online(workers.toList, 0, 0))
+  }
+
+  def identifyWorkers(nWorkers: Int) = {
+    log.info("Master initializing...")
+    val workerSelections = (1 to nWorkers).map(i => context.actorSelection(s"akka://WorkersSystem@localhost:2552/user/wordCountWorker$i"))
+    workerSelections.foreach(_ ! Identify("rtjvm"))
+    context.become(initializing(List(), nWorkers))
   }
 
   def initializing(workers: List[ActorRef], remainingWorkers: Int): Receive = {
@@ -95,8 +115,6 @@ object MasterApp extends App {
 
 object WorkersApp extends App {
 
-  import WordCountDomain._
-
   val config = ConfigFactory.parseString(
     """
       |akka.remote.artery.canonical.port = 2552
@@ -104,8 +122,5 @@ object WorkersApp extends App {
   ).withFallback(ConfigFactory.load("part2_remoting/remoteActorsExercise.conf"))
 
   val system = ActorSystem("WorkersSystem", config)
-
-  (1 to 5).map(i => system.actorOf(Props[WordCountWorker], s"wordCountWorker$i"))
-
 
 }
