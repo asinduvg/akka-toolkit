@@ -40,12 +40,12 @@ object ClusteringBasics extends App {
 
   def startCluster(ports: List[Int]): Unit = ports foreach { port =>
     val config = ConfigFactory.parseString(
-      s"""
-         |akka.remote.artery.canonical.port = $port
-         |""".stripMargin)
+        s"""
+           |akka.remote.artery.canonical.port = $port
+           |""".stripMargin)
       .withFallback(ConfigFactory.load("part3_clustering/clusteringBasics.conf"))
 
-    val system = ActorSystem("RTJVMCluster", config) // all the actor system in a cluster must have the same name
+    val system = ActorSystem("RTJVMCluster", config) // all the actor systems in a cluster must have the same name
     system.actorOf(Props[ClusterSubscriber], "clusterSubscriber")
   }
 
